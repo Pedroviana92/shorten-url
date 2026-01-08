@@ -1,11 +1,5 @@
 package com.shorten.url.shortenUrl.controller;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
-
-import org.apache.commons.validator.routines.UrlValidator;
-import org.hashids.Hashids;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -17,53 +11,28 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
+
 import java.net.URI;
 
 import com.shorten.url.shortenUrl.responseHandler.ResponseJson;
 import com.shorten.url.shortenUrl.responseHandler.UrlRequest;
-
-
+import com.shorten.url.shortenUrl.services.UrlShortenerService;
 
 @RestController
 @RequestMapping("/")
 public class MainPageController {
 
+    private final UrlShortenerService urlShortenerService;
 
-    private final Map<String, String> urlMap = new HashMap<>();
-    private final AtomicLong idGenerator = new AtomicLong(1000);
-    private final Hashids hashids = new Hashids("my-secret-salt-2026", 6);
-    private final UrlValidator urlValidator = new UrlValidator(new String[]{"http", "https"});
+    @Autowired
+    public MainPageController(UrlShortenerService urlShortenerService) {
+        this.urlShortenerService = urlShortenerService;
+    }
 
     @PostMapping("/shorten")
     public ResponseJson shortenUrl(@RequestBody UrlRequest urlRequest) {
         try {
-            String url = urlRequest.getUrl();
-
-            // Validate URL format
-            if (url == null || url.trim().isEmpty()) {
-                throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "URL cannot be empty. Please enter a valid URL."
-                );
-            }
-
-            if (!urlValidator.isValid(url)) {
-                throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Invalid URL format. Please enter a valid URL starting with http:// or https://"
-                );
-            }
-
-            long uniqueId = idGenerator.incrementAndGet();
-            String hashCode = hashids.encode(uniqueId);
-            String shortenUrl = "http://localhost:8080/" + hashCode;
-
-            urlMap.put(hashCode, url);
-
-            System.out.println(urlMap);
-
-            return new ResponseJson(shortenUrl, url, "Url shortened successfully");
-
+            return urlShortenerService.shortenUrl(urlRequest.getUrl());
         } catch (ResponseStatusException e) {
             throw e;
         } catch (Exception e) {
@@ -74,15 +43,10 @@ public class MainPageController {
         }
     }
 
-
     @GetMapping("/{hashCode}")
     public ResponseEntity<Void> redirectToOriginalUrl(@PathVariable String hashCode) {
         try {
-            String originalUrl = urlMap.get(hashCode);
-
-            if (originalUrl == null) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Shortened URL not found");
-            }
+            String originalUrl = urlShortenerService.getOriginalUrl(hashCode);
 
             HttpHeaders headers = new HttpHeaders();
             headers.setLocation(URI.create(originalUrl));
