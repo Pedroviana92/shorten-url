@@ -12,10 +12,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import jakarta.validation.Valid;
 import java.net.URI;
-
-import jakarta.servlet.RequestDispatcher;
-import jakarta.servlet.http.HttpServletRequest;
 
 import com.shorten.url.shortenUrl.responseHandler.ResponseJson;
 import com.shorten.url.shortenUrl.responseHandler.UrlRequest;
@@ -33,7 +31,7 @@ public class MainPageController {
     }
 
     @PostMapping("/shorten")
-    public ResponseJson shortenUrl(@RequestBody UrlRequest urlRequest) {
+    public ResponseJson shortenUrl(@Valid @RequestBody UrlRequest urlRequest) {
         try {
             return urlShortenerService.shortenUrl(urlRequest.getUrl());
         } catch (ResponseStatusException e) {

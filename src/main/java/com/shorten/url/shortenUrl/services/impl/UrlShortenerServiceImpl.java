@@ -4,7 +4,6 @@ import com.shorten.url.shortenUrl.domain.ShortenedUrl;
 import com.shorten.url.shortenUrl.repository.ShortenedUrlRepository;
 import com.shorten.url.shortenUrl.responseHandler.ResponseJson;
 import com.shorten.url.shortenUrl.services.UrlShortenerService;
-import org.apache.commons.validator.routines.UrlValidator;
 import org.hashids.Hashids;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,12 +19,8 @@ import java.util.concurrent.atomic.AtomicLong;
 @Transactional
 public class UrlShortenerServiceImpl implements UrlShortenerService {
 
-    // REMOVED: private final Map<String, String> urlMap = new HashMap<>();
-    // NEW: Inject the repository for database operations
     private final ShortenedUrlRepository repository;
-
     private final AtomicLong idGenerator = new AtomicLong(1000);
-    private final UrlValidator urlValidator = new UrlValidator(new String[]{"http", "https"});
     private Hashids hashids;
 
     @Value("${app.base-url}")
@@ -37,7 +32,6 @@ public class UrlShortenerServiceImpl implements UrlShortenerService {
     @Value("${app.hashids.min-length}")
     private int hashidsMinLength;
 
-    // NEW: Constructor injection of repository
     @Autowired
     public UrlShortenerServiceImpl(ShortenedUrlRepository repository) {
         this.repository = repository;
@@ -50,20 +44,7 @@ public class UrlShortenerServiceImpl implements UrlShortenerService {
 
     @Override
     public ResponseJson shortenUrl(String originalUrl) {
-        // Validate URL format
-        if (originalUrl == null || originalUrl.trim().isEmpty()) {
-            throw new ResponseStatusException(
-                HttpStatus.BAD_REQUEST,
-                "URL cannot be empty. Please enter a valid URL."
-            );
-        }
-
-        if (!urlValidator.isValid(originalUrl)) {
-            throw new ResponseStatusException(
-                HttpStatus.BAD_REQUEST,
-                "Invalid URL format. Please enter a valid URL starting with http:// or https://"
-            );
-        }
+        // Validation is now handled by @Valid in the controller layer
 
         // Generate unique hashCode (ensure no collision)
         String hashCode;
@@ -74,8 +55,7 @@ public class UrlShortenerServiceImpl implements UrlShortenerService {
 
         String shortenUrl = baseUrl + hashCode;
 
-        // CHANGED: Save to database instead of HashMap
-        // OLD: urlMap.put(hashCode, originalUrl);
+        // Save to database
         ShortenedUrl shortenedUrl = new ShortenedUrl(hashCode, originalUrl);
         repository.save(shortenedUrl);
 
@@ -85,8 +65,6 @@ public class UrlShortenerServiceImpl implements UrlShortenerService {
     @Override
     @Transactional(readOnly = true)
     public String getOriginalUrl(String hashCode) {
-        // CHANGED: Query database instead of HashMap
-        // OLD: String originalUrl = urlMap.get(hashCode);
         return repository.findByHashCode(hashCode)
             .map(ShortenedUrl::getOriginalUrl)
             .orElseThrow(() -> new ResponseStatusException(
