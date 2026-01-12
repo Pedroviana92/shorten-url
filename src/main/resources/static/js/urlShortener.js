@@ -1,5 +1,6 @@
 async function shortenUrl() {
     const urlInput = document.getElementById('urlInput');
+    const submitBtn = document.getElementById('submitBtn');
     const result = document.getElementById('result');
     const error = document.getElementById('error');
     const shortenedLink = document.getElementById('shortenedLink');
@@ -11,6 +12,11 @@ async function shortenUrl() {
         result.style.display = 'none';
         return;
     }
+
+    // Disable button and show loading state
+    submitBtn.disabled = true;
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Shortening...';
 
     try {
         const response = await fetch('/shorten', {
@@ -37,6 +43,10 @@ async function shortenUrl() {
     } catch (err) {
         error.textContent = err.message;
         result.style.display = 'none';
+    } finally {
+        // Re-enable button and restore text
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
     }
 }
 
